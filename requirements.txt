@@ -1,0 +1,6 @@
+trafilatura
+litellm
+requests
+pypdf
+click
+python-dotenv
