@@ -1,7 +1,9 @@
 # <title>
 
 > Source: {source}
+
 > Date: {date}
+
 > Tags: <tag1>, <tag2>, <tag3>
 
 ## TL;DR

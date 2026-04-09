@@ -112,3 +112,30 @@ Tags: finance, llm, trading
 ## Commentary
 ...
 ```
+
+## Interface (FastAPI)
+
+`readless` also ships with a small FastAPI server for building a frontend UI or integrating with other tools.
+
+### Start the server
+
+```bash
+uvicorn api:app --reload --host 127.0.0.1 --port 8000
+```
+
+### CORS
+
+Set `READLESS_WEB_ORIGINS` (comma-separated) to allow browser clients:
+
+```bash
+READLESS_WEB_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+```
+
+### Endpoints
+
+- `GET /api/health` - health check
+- `GET /api/providers` - available providers/models + templates + languages (and default content limit)
+- `POST /api/summarize/url` - summarize a URL (JSON)
+- `POST /api/summarize/url/stream` - summarize a URL with streaming NDJSON events
+- `POST /api/summarize/pdf` - summarize a PDF upload (multipart/form-data)
+- `POST /api/summarize/pdf/stream` - summarize a PDF upload with streaming NDJSON events

@@ -10,12 +10,10 @@ import litellm
 from litellm import completion
 
 from config import (
-    CHUNK_SUMMARY_PROMPT,
     DEFAULT_PROVIDER,
-    FINAL_SUMMARY_PROMPT,
     PROVIDERS,
     SINGLE_PASS_CONTENT_LIMIT,
-    SUMMARY_PROMPT,
+    build_prompts,
 )
 
 litellm.suppress_debug_info = True
@@ -162,6 +160,11 @@ def summarize(
     source: str,
     provider: str = DEFAULT_PROVIDER,
     model: str | None = None,
+    api_key: str | None = None,
+    language: str | None = None,
+    template: str | None = None,
+    custom_template: str | None = None,
+    content_limit: int | None = None,
 ) -> str:
     """
     Summarize content using the specified provider/model.
@@ -173,34 +176,35 @@ def summarize(
 
     cfg = PROVIDERS[provider]
     model_name = model or cfg["default"]
+    effective_content_limit = content_limit or SINGLE_PASS_CONTENT_LIMIT
 
     # Inject API key and optional base URL
-    api_key = os.getenv(cfg["env_key"])
-    if not api_key:
+    resolved_api_key = api_key or os.getenv(cfg["env_key"])
+    if not resolved_api_key:
         raise EnvironmentError(
             f"Missing environment variable: {cfg['env_key']}\n"
             f"Add it to your .env file."
         )
 
-    extra = {}
+    extra = {"api_key": resolved_api_key}
     if provider == "gemini":
         # Force LiteLLM onto Gemini API instead of Vertex AI auth.
         if not model_name.startswith("gemini/"):
             model_name = f"gemini/{model_name}"
-        extra["api_key"] = api_key
     if "api_base" in cfg:
         extra["api_base"] = cfg["api_base"]
-        extra["api_key"] = api_key  # litellm needs it explicitly for custom bases
 
-    prompt = SUMMARY_PROMPT.format(
+    prompts = build_prompts(language=language, template=template, custom_template=custom_template)
+
+    prompt = prompts["summary_prompt"].format(
         source=source,
         date=date.today().isoformat(),
-        content=content[:SINGLE_PASS_CONTENT_LIMIT],
+        content=content[:effective_content_limit],
     )
     paragraphs = _split_paragraphs(content)
     section_count = sum(1 for paragraph in paragraphs if _is_section_heading(paragraph))
-    chunks = _chunk_text(content, SINGLE_PASS_CONTENT_LIMIT)
-    use_chunking = len(content) > SINGLE_PASS_CONTENT_LIMIT and len(chunks) > 1
+    chunks = _chunk_text(content, effective_content_limit)
+    use_chunking = len(content) > effective_content_limit and len(chunks) > 1
 
     if use_chunking:
         chunk_summaries = []
@@ -211,7 +215,7 @@ def summarize(
             print(f"   Chunked summarization enabled: {total_chunks} chunks (paragraph-only mode)")
         for index, chunk in enumerate(chunks, start=1):
             print(f"   Summarizing chunk {index}/{total_chunks}...")
-            chunk_prompt = CHUNK_SUMMARY_PROMPT.format(
+            chunk_prompt = prompts["chunk_summary_prompt"].format(
                 chunk_number=index,
                 chunk_total=total_chunks,
                 source=source,
@@ -220,7 +224,7 @@ def summarize(
             )
             chunk_summaries.append(_complete(model_name, chunk_prompt, extra))
 
-        prompt = FINAL_SUMMARY_PROMPT.format(
+        prompt = prompts["final_summary_prompt"].format(
             source=source,
             date=date.today().isoformat(),
             content="\n\n".join(chunk_summaries),

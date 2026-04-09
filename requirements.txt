@@ -4,3 +4,6 @@ requests
 pypdf
 click
 python-dotenv
+fastapi
+uvicorn
+python-multipart
