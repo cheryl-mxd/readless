@@ -139,3 +139,33 @@ READLESS_WEB_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
 - `POST /api/summarize/url/stream` - summarize a URL with streaming NDJSON events
 - `POST /api/summarize/pdf` - summarize a PDF upload (multipart/form-data)
 - `POST /api/summarize/pdf/stream` - summarize a PDF upload with streaming NDJSON events
+
+## Docker
+
+### Start API only
+
+```bash
+docker build -t readless-api .
+docker run --rm -p 8000:8000 --env-file .env readless-api
+```
+
+Health check:
+
+```bash
+curl http://localhost:8000/api/health
+```
+
+### Start API + Web UI (docker compose)
+
+```bash
+docker compose up --build
+```
+
+- Web: `http://localhost:3000`
+- API: `http://localhost:8000`
+
+Notes:
+
+- In Web mode, provider API keys come only from the key entered in the frontend UI (request `apiKey`).
+- The API container still reads non-secret runtime settings from your local `.env` (do not commit it).
+- If your frontend is not running on port 3000, update `READLESS_WEB_ORIGINS` accordingly.
