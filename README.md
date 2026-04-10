@@ -117,7 +117,7 @@ Tags: finance, llm, trading
 ...
 ```
 
-## Interface (FastAPI)
+## API (FastAPI)
 
 `readless` also ships with a small FastAPI server for building a frontend UI or integrating with other tools.
 
@@ -145,6 +145,28 @@ When you use the Next.js web app through its built-in `/api` proxy, the browser 
 - `POST /api/summarize/url/stream` - summarize a URL with streaming NDJSON events
 - `POST /api/summarize/pdf` - summarize a PDF upload (multipart/form-data)
 - `POST /api/summarize/pdf/stream` - summarize a PDF upload with streaming NDJSON events
+
+## Web UI (Next.js)
+
+For local development, run the FastAPI server and the Next.js app in two terminals. The frontend proxies `/api/*` to the backend; `web/next.config.ts` defaults that target to `http://api:8000` (the Docker service name), so on your machine you must point it at the local API.
+
+### Start Next.js (local)
+
+```bash
+cd web
+npm install
+API_INTERNAL_URL=http://127.0.0.1:8000 npm run dev
+```
+
+Then open `http://localhost:3000` (or the port shown in the Next.js dev output).
+
+Set `READLESS_WEB_ORIGINS` when the browser calls the API directly; when you use only the `/api` proxy from Next.js, the important variable for local dev is `API_INTERNAL_URL` as above.
+
+On Windows, set the variable in the same shell before `npm run dev`, for example:
+
+```powershell
+$env:API_INTERNAL_URL="http://127.0.0.1:8000"; npm run dev
+```
 
 ## Docker
 
@@ -177,6 +199,46 @@ Notes:
 - The frontend now calls the backend through the Next.js `/api` proxy, so you do not need to set a public backend URL in the frontend.
 - `docker compose` reads deployment settings from the root `.env`, so you can change `WEB_PORT`, `API_PORT`, `API_INTERNAL_URL`, and `READLESS_WEB_ORIGINS` in one place.
 - For cloud deployments, users can keep opening `http://<server-ip>:<WEB_PORT>` and the frontend will proxy `/api` requests to the API container.
+
+### Stop the stack
+
+Foreground session: press `Ctrl+C`. Detached (`-d`) or background:
+
+```bash
+docker compose down
+```
+
+That stops and removes the compose containers for this project; images and volumes are left in place unless you add options such as `-v` (only use `-v` if you intend to remove named volumes declared in the compose file).
+
+### Check status and logs
+
+```bash
+docker compose ps
+docker compose logs -f
+docker compose logs -f web api
+```
+
+Use `docker stats` for live CPU and memory usage across containers.
+
+### Rebuild without cache
+
+When you need a clean image rebuild (for example after dependency or Dockerfile changes):
+
+```bash
+docker compose down
+docker compose build --no-cache
+docker compose up --build
+```
+
+Detached:
+
+```bash
+docker compose down
+docker compose build --no-cache
+docker compose up --build -d
+```
+
+To free Docker build cache more aggressively (affects other projects too), see `docker builder prune` in the Docker documentation.
 
 ### Cloud deployment example
 

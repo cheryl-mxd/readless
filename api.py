@@ -19,8 +19,6 @@ from schemas import ProviderInfo, ProvidersResponse, SummarizeResponse, Summariz
 from summarizer import summarize
 
 load_dotenv()
-
-
 class _QueueWriter:
     def __init__(self, event_queue: Queue):
         self.event_queue = event_queue
@@ -129,6 +127,7 @@ def _start_summary_worker(
     template: str,
     language: str,
     custom_template: str | None,
+    content_limit: int | None,
     event_queue: Queue,
     pdf_path: str | None = None,
 ) -> None:
@@ -162,6 +161,7 @@ def _start_summary_worker(
                     template=template,
                     language=language,
                     custom_template=custom_template,
+                    content_limit=content_limit,
                     source_type=source_type,
                 )
 
