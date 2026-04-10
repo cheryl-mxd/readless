@@ -5,13 +5,17 @@ RUN npm ci
 
 FROM node:20-alpine AS builder
 WORKDIR /app
+ARG API_INTERNAL_URL=http://api:8000
+ENV API_INTERNAL_URL=$API_INTERNAL_URL
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build
 
 FROM node:20-alpine AS runner
 WORKDIR /app
-ENV NODE_ENV=production
+ARG API_INTERNAL_URL=http://api:8000
+ENV NODE_ENV=production \
+    API_INTERNAL_URL=$API_INTERNAL_URL
 
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force

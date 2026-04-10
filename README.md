@@ -42,6 +42,10 @@ Optional `.env` defaults:
 - `DEFAULT_LANGUAGE` - output language used by prompts
 - `OUTPUT_TEMPLATE` - output template name, for example `obsidian` or `default-markdown`
 - `SINGLE_PASS_CONTENT_LIMIT` - max content length for one-pass summarization and per-chunk splitting
+- `WEB_PORT` - host port for the Next.js frontend when using `docker compose`
+- `API_PORT` - optional host port for direct API debugging when using `docker compose`
+- `API_INTERNAL_URL` - internal API target used by the Next.js `/api` proxy, typically `http://api:8000`
+- `READLESS_WEB_ORIGINS` - comma-separated browser origins allowed to call the API directly
 
 ## Usage
 
@@ -131,6 +135,8 @@ Set `READLESS_WEB_ORIGINS` (comma-separated) to allow browser clients:
 READLESS_WEB_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
 ```
 
+When you use the Next.js web app through its built-in `/api` proxy, the browser talks to the frontend origin and Next forwards requests to the API container internally. In that setup, you usually only need `READLESS_WEB_ORIGINS` for direct browser-to-API calls or custom deployments.
+
 ### Endpoints
 
 - `GET /api/health` - health check
@@ -162,10 +168,56 @@ docker compose up --build
 ```
 
 - Web: `http://localhost:3000`
-- API: `http://localhost:8000`
+- Browser-facing API entrypoint: `http://localhost:3000/api/...`
+- Optional direct API debugging: `http://localhost:8000`
 
 Notes:
 
 - In Web mode, provider API keys come only from the key entered in the frontend UI (request `apiKey`).
-- The API container still reads non-secret runtime settings from your local `.env` (do not commit it).
-- If your frontend is not running on port 3000, update `READLESS_WEB_ORIGINS` accordingly.
+- The frontend now calls the backend through the Next.js `/api` proxy, so you do not need to set a public backend URL in the frontend.
+- `docker compose` reads deployment settings from the root `.env`, so you can change `WEB_PORT`, `API_PORT`, `API_INTERNAL_URL`, and `READLESS_WEB_ORIGINS` in one place.
+- For cloud deployments, users can keep opening `http://<server-ip>:<WEB_PORT>` and the frontend will proxy `/api` requests to the API container.
+
+### Cloud deployment example
+
+For a cloud server, keep the browser entrypoint on the frontend port and let Next.js proxy `/api` requests internally.
+
+Default `.env` example:
+
+```bash
+WEB_PORT=3000
+API_PORT=8000
+API_INTERNAL_URL=http://api:8000
+READLESS_WEB_ORIGINS=http://<server-ip>:3000
+```
+
+Then start the stack:
+
+```bash
+docker compose up --build -d
+```
+
+Access patterns:
+
+- Open the app in your browser at `http://<server-ip>:3000`
+- The frontend will call the backend through `http://<server-ip>:3000/api/...`
+- If you want to debug the API directly, use `http://<server-ip>:8000`
+
+This setup means you usually only need to update the root `.env` when the server IP or exposed ports change.
+
+### If port 8000 is already in use
+
+If the host port `8000` is occupied, you do not need to change the frontend entrypoint or the internal API URL. Only change the exposed API port in the root `.env`:
+
+```bash
+WEB_PORT=3000
+API_PORT=8001
+API_INTERNAL_URL=http://api:8000
+READLESS_WEB_ORIGINS=http://<server-ip>:3000
+```
+
+In that case:
+
+- Keep opening the app at `http://<server-ip>:3000`
+- The frontend still calls the backend through `http://<server-ip>:3000/api/...`
+- Only the direct API debugging address changes to `http://<server-ip>:8001`

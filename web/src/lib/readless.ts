@@ -114,12 +114,14 @@ tags: ["<tag1>", "<tag2>", "<tag3>"]
 <Critically analyze implications, limitations, or unique insights. Leave blank if none.>`,
 };
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ??
-  "http://127.0.0.1:8000";
+const API_BASE_PATH = "";
+
+function getApiUrl(path: string): string {
+  return `${API_BASE_PATH}${path}`;
+}
 
 function getBackendUnavailableMessage(): string {
-  return `Cannot reach the backend at ${API_BASE_URL}. Please make sure the FastAPI server is running.`;
+  return "Cannot reach the backend via /api. Please make sure the FastAPI server is running and the frontend proxy is configured.";
 }
 
 function getStreamRouteNotFoundMessage(): string {
@@ -213,7 +215,7 @@ async function consumeSummaryStream(
 }
 
 export async function fetchProviders(): Promise<AppConfig> {
-  const response = await fetch(`${API_BASE_URL}/api/providers`, {
+  const response = await fetch(getApiUrl("/api/providers"), {
     cache: "no-store",
   });
 
@@ -245,7 +247,7 @@ export async function summarizeUrl(input: {
   onLog?: (message: string) => void;
 }): Promise<SummaryResponse> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/summarize/url/stream`, {
+    const response = await fetch(getApiUrl("/api/summarize/url/stream"), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -295,7 +297,7 @@ export async function summarizePdf(input: {
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}/api/summarize/pdf/stream`, {
+    const response = await fetch(getApiUrl("/api/summarize/pdf/stream"), {
       method: "POST",
       body: formData,
     });
